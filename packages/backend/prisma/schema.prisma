@@ -1,0 +1,121 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum IncidentStatus {
+  active
+  assigned
+  attending
+  support
+  cancelled
+  finished
+}
+
+enum DriverShiftStatus {
+  available
+  in_service
+  in_support
+}
+
+model User {
+  id          String         @id @default(uuid())
+  nombre      String
+  email       String         @unique
+  telefono    String?
+  password    String
+  createdAt   DateTime       @default(now())
+  incidents   IncidentUser[]
+}
+
+model Admin {
+  id        String   @id @default(uuid())
+  nombre    String
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+}
+
+model Institution {
+  id          String       @id @default(uuid())
+  nombre      String
+  direccion   String?
+  telefono    String?
+  ambulances  Ambulance[]
+  drivers     Driver[]
+  createdAt   DateTime     @default(now())
+}
+
+model Ambulance {
+  id            String        @id @default(uuid())
+  codigo        String        @unique
+  placa         String
+  modelo        String?
+  institutionId String
+  institution   Institution   @relation(fields: [institutionId], references: [id])
+  shifts        DriverShift[]
+  createdAt     DateTime      @default(now())
+}
+
+model Driver {
+  id            String        @id @default(uuid())
+  nombre        String
+  email         String        @unique
+  telefono      String?
+  password      String
+  institutionId String
+  institution   Institution   @relation(fields: [institutionId], references: [id])
+  shifts        DriverShift[]
+  createdAt     DateTime      @default(now())
+}
+
+model DriverShift {
+  id           String            @id @default(uuid())
+  driverId     String
+  ambulanceId  String
+  status       DriverShiftStatus @default(available)
+  startedAt    DateTime          @default(now())
+  endedAt      DateTime?
+  currentLat   Float?
+  currentLng   Float?
+  driver       Driver            @relation(fields: [driverId], references: [id])
+  ambulance    Ambulance         @relation(fields: [ambulanceId], references: [id])
+  incidents    Incident[]
+}
+
+model Incident {
+  id           String         @id @default(uuid())
+  status       IncidentStatus @default(active)
+  lat          Float
+  lng          Float
+  direccion    String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  shiftId      String?
+  shift        DriverShift?   @relation(fields: [shiftId], references: [id])
+  incidentUsers IncidentUser[]
+  logs         IncidentLog[]
+}
+
+model IncidentUser {
+  id         String   @id @default(uuid())
+  incidentId String
+  userId     String
+  createdAt  DateTime @default(now())
+  incident   Incident @relation(fields: [incidentId], references: [id])
+  user       User     @relation(fields: [userId], references: [id])
+
+  @@unique([incidentId, userId])
+}
+
+model IncidentLog {
+  id         String   @id @default(uuid())
+  incidentId String
+  mensaje    String
+  createdAt  DateTime @default(now())
+  incident   Incident @relation(fields: [incidentId], references: [id])
+}
